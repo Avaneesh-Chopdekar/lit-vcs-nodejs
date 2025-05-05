@@ -47,6 +47,36 @@ class Lit {
       encoding: "utf-8",
     });
   }
+
+  async commit(message) {
+    const index = JSON.parse(
+      await fs.readFile(this.indexPath, { encoding: "utf-8" })
+    );
+    const parentCommit = await this.getCurrentHead(); // Get the current HEAD commit hash
+
+    const commitData = {
+      timestamp: new Date().toISOString(),
+      message: message,
+      files: index,
+      parent: parentCommit,
+    };
+
+    const commitHash = this.hashObject(JSON.stringify(commitData)); // Hash the commit data
+    const commitPath = path.join(this.objectsPath, commitHash); // .lit/objects/abc123
+
+    await fs.writeFile(commitPath, JSON.stringify(commitData)); // Write the commit data to a file
+    await fs.writeFile(this.headPath, commitHash); // Update the HEAD file to point to the new commit
+    await fs.writeFile(this.indexPath, JSON.stringify([])); // Clear the index after commit
+    console.log(`Committed successfully with hash: ${commitHash}`);
+  }
+
+  async getCurrentHead() {
+    try {
+      return await fs.readFile(this.headPath, { encoding: "utf-8" });
+    } catch (err) {
+      return null; // If HEAD file doesn't exist, return null
+    }
+  }
 }
 
 const lit = new Lit(process.cwd());
@@ -62,6 +92,8 @@ function prompt() {
 
     if (cmd === "add") {
       await lit.add(args[0]);
+    } else if (cmd === "commit") {
+      await lit.commit(args.join(" "));
     } else if (cmd === "exit") {
       rl.close();
       return;
