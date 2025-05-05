@@ -1,6 +1,7 @@
 import path from "path";
 import fs from "fs/promises";
 import crypto from "crypto";
+import readline from "readline";
 
 class Lit {
   constructor(repoPath = ".") {
@@ -38,3 +39,27 @@ class Lit {
 }
 
 const lit = new Lit(process.cwd());
+
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout,
+});
+
+function prompt() {
+  rl.question("lit> ", async (input) => {
+    const [cmd, ...args] = input.split(" ");
+
+    if (cmd === "add") {
+      await lit.add(args[0]);
+    } else if (cmd === "exit") {
+      rl.close();
+      return;
+    } else {
+      console.log(`Unknown command: ${cmd}`);
+    }
+
+    prompt();
+  });
+}
+
+prompt();
