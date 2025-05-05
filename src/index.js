@@ -77,6 +77,25 @@ class Lit {
       return null; // If HEAD file doesn't exist, return null
     }
   }
+
+  async log() {
+    let currentCommitHash = await this.getCurrentHead(); // Get the current HEAD commit hash
+    while (currentCommitHash) {
+      const commitPath = path.join(this.objectsPath, currentCommitHash); // .lit/objects/abc123
+      const commitData = JSON.parse(
+        await fs.readFile(commitPath, { encoding: "utf-8" })
+      );
+      console.log(`Commit: ${currentCommitHash}`);
+      console.log(`Message: ${commitData.message}`);
+      console.log(`Timestamp: ${commitData.timestamp}`);
+      console.log(`Files:`);
+      commitData.files.forEach((file) => {
+        console.log(`  - ${file.path} (${file.hash})`);
+      });
+      console.log("--------------------");
+      currentCommitHash = commitData.parent; // Move to the parent commit
+    }
+  }
 }
 
 const lit = new Lit(process.cwd());
@@ -94,6 +113,8 @@ function prompt() {
       await lit.add(args[0]);
     } else if (cmd === "commit") {
       await lit.commit(args.join(" "));
+    } else if (cmd === "log") {
+      await lit.log();
     } else if (cmd === "exit") {
       rl.close();
       return;
