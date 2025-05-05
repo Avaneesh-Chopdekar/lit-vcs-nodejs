@@ -33,8 +33,19 @@ class Lit {
     console.log(fileHash);
     const newFileHashedObjectPath = path.join(this.objectsPath, fileHash); // .groot/objects/abc123
     await fs.writeFile(newFileHashedObjectPath, fileData);
-    // await this.updateStagingArea(fileToBeAdded, fileHash);
+    await this.updateStagingArea(fileToBeAdded, fileHash);
     console.log(`Added ${fileToBeAdded}`);
+  }
+
+  async updateStagingArea(filePath, fileHash) {
+    const index = JSON.parse(
+      await fs.readFile(this.indexPath, { encoding: "utf-8" })
+    );
+
+    index.push({ path: filePath, hash: fileHash }); // Add the file to the index
+    await fs.writeFile(this.indexPath, JSON.stringify(index), {
+      encoding: "utf-8",
+    });
   }
 }
 
