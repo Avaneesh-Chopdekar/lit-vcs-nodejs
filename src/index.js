@@ -1,5 +1,6 @@
 import path from "path";
 import fs from "fs/promises";
+import crypto from "crypto";
 
 class Lit {
   constructor(repoPath = ".") {
@@ -18,6 +19,21 @@ class Lit {
     } catch (err) {
       console.log("Already initialized .lit folder");
     }
+  }
+
+  hashObject(content) {
+    return crypto.createHash("sha1").update(content, "utf-8").digest("hex");
+  }
+
+  async add(fileToBeAdded) {
+    // fileToBeAdded: path/to/file
+    const fileData = await fs.readFile(fileToBeAdded, { encoding: "utf-8" }); // read the file
+    const fileHash = this.hashObject(fileData); // hash the file
+    console.log(fileHash);
+    const newFileHashedObjectPath = path.join(this.objectsPath, fileHash); // .groot/objects/abc123
+    await fs.writeFile(newFileHashedObjectPath, fileData);
+    // await this.updateStagingArea(fileToBeAdded, fileHash);
+    console.log(`Added ${fileToBeAdded}`);
   }
 }
 
