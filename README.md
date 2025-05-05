@@ -22,7 +22,7 @@ Lit's command line interface appears and you can directly run lit's commands.
 - View commit history
 - View changes between commits
 
-## Example
+## Getting started
 
 To get started with lit, add index.js file to your project and run the following command:
 
