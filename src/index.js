@@ -2,6 +2,8 @@ import path from "path";
 import fs from "fs/promises";
 import crypto from "crypto";
 import readline from "readline";
+import { diffLines } from "diff";
+import chalk from "chalk";
 
 class Lit {
   constructor(repoPath = ".") {
@@ -96,6 +98,89 @@ class Lit {
       currentCommitHash = commitData.parent; // Move to the parent commit
     }
   }
+
+  async getCommitData(commitHash) {
+    const commitPath = path.join(this.objectsPath, commitHash); // .lit/objects/abc123
+    try {
+      const commitData = JSON.parse(
+        await fs.readFile(commitPath, { encoding: "utf-8" })
+      );
+      return commitData;
+    } catch (err) {
+      console.error(`Commit ${commitHash} not found.`, err);
+      return null;
+    }
+  }
+
+  async getFileContent(fileHash) {
+    const filePath = path.join(this.objectsPath, fileHash); // .lit/objects/abc123
+    try {
+      const fileContent = await fs.readFile(filePath, {
+        encoding: "utf-8",
+      });
+      return fileContent;
+    } catch (err) {
+      console.error(`File ${fileHash} not found.`, err);
+      return null;
+    }
+  }
+
+  async getParentFileContent(parentCommitData, filePath) {
+    const parentFile = parentCommitData.files.find((f) => f.path === filePath);
+    if (parentFile) {
+      const parentFileContent = await this.getFileContent(parentFile.hash); // Get the parent file content
+      if (parentFileContent) {
+        return parentFileContent; // Return the parent file content
+      }
+    }
+  }
+
+  async showCommitDiff(commitHash) {
+    const commitData = await this.getCommitData(commitHash);
+    if (!commitData) return;
+
+    console.log("Changes in last commit:");
+
+    for (const file of commitData.files) {
+      const filePath = path.join(this.repoPath, file.path); // Get the full path of the file
+      try {
+        console.log(`File: ${file.path}`);
+        const fileContent = await this.getFileContent(file.hash); // Get the file content from the commit
+        if (fileContent) {
+          console.log(`Content:\n${fileContent}`); // Print the file content
+        }
+
+        if (commitData.parent) {
+          const parentCommitData = await this.getCommitData(commitData.parent);
+          const getParentFileContent = await this.getParentFileContent(
+            parentCommitData,
+            file.path
+          ); // Get the parent file content
+
+          if (getParentFileContent !== undefined) {
+            console.log("\nDiff:\n");
+            const diff = diffLines(getParentFileContent, fileContent); // Get the diff between the parent and current file content
+            diff.forEach((part) => {
+              if (part.added) {
+                process.stdout.write(chalk.green(`+${part.value}`)); // Added lines
+              } else if (part.removed) {
+                process.stdout.write(chalk.red(`-${part.value}`)); // Removed lines
+              } else {
+                process.stdout.write(chalk.grey(part.value)); // Unchanged lines
+              }
+            });
+            console.log("\n"); // New line after diff
+          } else {
+            console.log("New file in this commit");
+          }
+        } else {
+          console.log("First commit");
+        }
+      } catch (err) {
+        console.error(`Error reading file ${file.path}:`, err);
+      }
+    }
+  }
 }
 
 const lit = new Lit(process.cwd());
@@ -113,6 +198,11 @@ function prompt() {
       await lit.add(args[0]);
     } else if (cmd === "commit") {
       await lit.commit(args.join(" "));
+    } else if (cmd === "log") {
+      await lit.log();
+    } else if (cmd === "diff") {
+      const commitHash = args[0] || (await lit.getCurrentHead());
+      await lit.showCommitDiff(commitHash);
     } else if (cmd === "log") {
       await lit.log();
     } else if (cmd === "exit") {

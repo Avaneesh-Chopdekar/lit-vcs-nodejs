@@ -9,6 +9,7 @@
     "start": "node src/index.js"
   },
   "dependencies": {
-    "chalk": "^5.4.1"
+    "chalk": "^5.4.1",
+    "diff": "^7.0.0"
   }
 }
